@@ -73,8 +73,6 @@ def run_scAGr(X2, X1, K1 , K2 , S=0.95, Alpha=0, Lambda=3, Gamma=1, Gamma2=1, Th
         eq7 = np.trace(DW1+DW1.T)
         # eq8
         eq8 = np.trace(np.dot((D1*M).T, D1*M))
-
-        #step_lr = (0-eq1-eq2+eq3+eq4-Alpha*eq6+Alpha*eq7) / (2*eq5+2*Alpha*eq8)
         step_lr = (0-eq1-eq2+eq3+eq4-(Alpha+Gamma)*eq6+(Alpha+Gamma)*eq7) / (2*eq5+2*(Alpha+Gamma)*eq8)
         W1 = W1 - step_lr * D1
         W1 = np.maximum(W1, 0)
@@ -198,9 +196,6 @@ def run_scAGr(X2, X1, K1 , K2 , S=0.95, Alpha=0, Lambda=3, Gamma=1, Gamma2=1, Th
     n = d2[1]
     q = d2[0]
     m = d3[1]
-    print('m = '+str(m))
-    print('n = '+str(n))
-    print('q = '+str(q))
     if type(W1) == type(None):
         np.random.seed(Seed)
         W1 = np.matlib.rand(q, K1+K2)
@@ -242,14 +237,7 @@ def run_scAGr(X2, X1, K1 , K2 , S=0.95, Alpha=0, Lambda=3, Gamma=1, Gamma2=1, Th
     H = nmf.components_                         
     W1 = P1
     
-#     nmf = NMF(n_components=K2, max_iter=10000, random_state=Seed)
-#     W2 = np.hstack((M4,nmf.fit_transform(X2)))
-#     W1 = P1
-#     W1 = myscaler(W1)
-#     W2 = myscaler(W2)
-#     W = W1+W2
-#     H = nmf_W(X2,W)
- 
+
     
     H = matrix(H)
     lib = np.sum(H, axis=1)
@@ -304,19 +292,6 @@ def run_scAGr(X2, X1, K1 , K2 , S=0.95, Alpha=0, Lambda=3, Gamma=1, Gamma2=1, Th
         # update Z
         Z, obj = Z_update(X2, P1, Z, Z0, R, W1, W2, H,  Alpha, Lambda, Gamma, Gamma2, Theta, obj)
         
-        '''
-        # normalize Z
-        Z = matrix(Z)
-        lib = np.sum(Z, axis=1)
-        Z = Z /(np.tile(lib, (1,n))+ np.spacing(1))
-        Z = np.asarray(Z)
-        '''
-           
-        '''
-        # update W1
-        W1, obj = W1_update(X2, P1, Z, Z0, R, W1, W2, H, Alpha, Lambda, Gamma, Gamma2, Theta, obj)
-        '''     
-        
         # update W2
         W2, obj = W2_update(X2, P1, Z, Z0, R, W1, W2, H,  Alpha, Lambda, Gamma, Gamma2, Theta, obj)
         
@@ -333,7 +308,7 @@ def run_scAGr(X2, X1, K1 , K2 , S=0.95, Alpha=0, Lambda=3, Gamma=1, Gamma2=1, Th
         norm6 = pow(LA.norm(P1-W1*M, ord = 'fro'), 2)
         obj = norm1 + Lambda * norm2 + Gamma * norm3 + Gamma2 * norm4 + Theta * norm5 + Alpha * norm6
 
-        print('Iteration: '+str(iter)+'\t'+'J value: '+str(obj)+'\t'+'norm1: '+str(norm1)+'\t'+'norm2: '+str(norm2*Lambda)+'\t'+'norm3: '+str(norm3*Gamma) + '\t' + 'norm4: '+str(norm4*Gamma2) + '\t' + 'norm5: '+str(norm5*Theta) + '\t' + 'norm6: '+str(norm6*Alpha) )
+        print('Iteration: '+str(iter)+'\t'+'Loss: '+str(obj)+'\t'+'norm1: '+str(norm1)+'\t'+'norm2: '+str(norm2*Lambda)+'\t'+'norm3: '+str(norm3*Gamma) + '\t' + 'norm4: '+str(norm4*Gamma2) + '\t' + 'norm5: '+str(norm5*Theta) + '\t' + 'norm6: '+str(norm6*Alpha) )
 
     time_end = time.time()
     print('\n')
@@ -505,14 +480,11 @@ def run_scAGp(X2, K, S=0.95, Alpha=1, Lambda=10000, Gamma=1, Gamma2=1, Theta=0, 
     obj = J_compute(X2, Z, Z0, R, W2, H, K, Lambda, Gamma, Gamma2, Theta)
     
     for iter in range(1, Maxiter_1+1):
-        
-        '''
-        # update R
+         # update R
         Seed = Seed + 1
         np.random.seed(Seed)
         R = np.random.binomial(1, S, size=(n, n))
-        '''
-        
+
         # normalize H
         H = matrix(H)
         lib = np.sum(H, axis=1)
@@ -524,13 +496,7 @@ def run_scAGp(X2, K, S=0.95, Alpha=1, Lambda=10000, Gamma=1, Gamma2=1, Theta=0, 
         # update Z
         Z, obj = Z_update(X2, Z, Z0, R, W2, H, K, Lambda, Gamma, Gamma2, Theta, obj)
         
-        '''
-        # normalize Z
-        Z = matrix(Z)
-        lib = np.sum(Z, axis=1)
-        Z = Z /(np.tile(lib, (1,n))+ np.spacing(1))
-        Z = np.asarray(Z)
-        '''
+
        
         # update W2
         W2, obj = W2_update(X2, Z, Z0, R, W2, H, K, Lambda, Gamma, Gamma2, Theta, obj)
@@ -549,14 +515,14 @@ def run_scAGp(X2, K, S=0.95, Alpha=1, Lambda=10000, Gamma=1, Gamma2=1, Theta=0, 
         
         J_record[iter-1] = obj
         if(iter%1 == 0):
-            print('Iteration: '+str(iter)+'\t'+'J value: '+str(obj)+'\t'+'norm1: '+str(norm1)+'\t'+'norm2: '+str(norm2*Lambda)+'\t'+'norm3: '+str(norm3*Gamma)+'\t'+'norm4: '+str(norm4*Gamma2)+'\t'+'norm5: '+str(norm5*Theta))
+            print('Iteration: '+str(iter)+'\t'+'Loss: '+str(obj)+'\t'+'norm1: '+str(norm1)+'\t'+'norm2: '+str(norm2*Lambda)+'\t'+'norm3: '+str(norm3*Gamma)+'\t'+'norm4: '+str(norm4*Gamma2)+'\t'+'norm5: '+str(norm5*Theta))
         iter = iter + 1
         if iter > 20:
             if (J_record[iter-10] - J_record[iter-9]) / (J_record[iter-9] + np.spacing(1)) < 1e-6:
                 break
     
     print('\n')
-    print('## Running sccASE with seed %d ##' % Seed)
+    print('## Running scCASE with seed %d ##' % Seed)
     print('\n')
     # J_plot(J_record)
     

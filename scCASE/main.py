@@ -18,7 +18,7 @@ def run(data_path,ref_path = None,method = "scCASE",data_format = "count matrix"
         K1 = Estimate_k(raw_data,method,type_number_range)
         K1 = eval("K1"+changeK)
         Lambda = Lambda_calculate(raw_data, "p")
-        X_imputed,*matrixs= run_scAGp(raw_data,K1,Lambda = Lambda,saveZ = saveZ)
+        X_imputed,*Matrices= run_scAGp(raw_data,K1,Lambda = Lambda,saveZ = saveZ)
 
     
     elif method == "scCASER":

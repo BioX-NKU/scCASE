@@ -71,7 +71,6 @@ def Estimate_k(data_tfidf,method,search_range ):
     adata = sc.AnnData(data_tfidf.T,dtype="float32")
     search_list = list(search_range)
     estimated_k = aster.ensemble.estimate_k(adata, search_list)
-    print(estimated_k)
     if method == "scCASE":
         estimated_k = estimated_k+1
     elif method =="scCASER":
@@ -108,7 +107,6 @@ def tfidf(data,bulk = None):
     data_tfidf = tf_idf_transform(data)
     if bulk is not None:
         ref_tfidf =tf_idf_transform(bulk)
-        #ref_tfidf = bulk
     else:
         ref_tfidf = None
     return data_tfidf,ref_tfidf

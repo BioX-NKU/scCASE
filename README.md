@@ -1,7 +1,10 @@
+[![PyPI](https://img.shields.io/pypi/v/sccase.svg)](https://pypi.org/project/sccase)
+[![Downloads](https://pepy.tech/badge/sccase)](https://pepy.tech/project/sccase)
 # Accurate and interpretable enhancement for single-cell chromatin accessibility sequencing data with scCASE
 ![](scCASE.png)
+
 ## Installation  
-scCASE is available on PyPI and can be installed via
+scCASE is available on [PyPI](https://pypi.org/project/sccase/) and can be installed via
 	
 	pip install scCASE
 
@@ -15,6 +18,8 @@ The dependencies will be automatically installed along with scCASE
 
 ## Quick Start
 
+### The source code for the reproduction of results can be found [here](https://zenodo.org/record/8382877).
+### We also provide a [Jupyter Notebook](https://github.com/BioX-NKU/scCASE/blob/main/Tutorial.ipynb) for running scCASE.
 #### Input
 * **h5ad file**:
 	* AnnData object of shape `n_obs` × `n_vars`. 
@@ -24,15 +29,17 @@ The dependencies will be automatically installed along with scCASE
 #### Output
 * **Enhanced scCAS data**:  The data enhanced by scCASE.
 * **Optional output:**
-	* **Projection matrix(W)**:  Projection matrix created by scCASE, which shows the peak expression program.
-	* **Cell embedding(H)**:  Cell embedding created by scCASE, which shows the low-dimensional representation of cells.
-	* **Similarity matrix(Z)**: Similarity matrix created by scCASE, which shows the cell-to-cell similarity calculated through iteration.
+	* **Projection matrix(W)**:  Projection matrix created by scCASE, which is the peak expression program.
+	* **Cell embedding matrix(H)**:  Cell embedding created by scCASE, which is the low-dimensional representation of cells.
+	* **Similarity matrix(Z)**: Similarity matrix created by scCASE, which is the cell-to-cell similarity calculated through iteration.
+
 #### Run 
+* **Use functions in SCALE packages:**
 	import scCASE
 	result = scCASE.run(data_path)
 
 **Optional parameters**
-Here we introduce the parameters of the scCASE method, with the [corresponding options] in terminal.
+Here we introduce the parameters of the scCASE method.
 	scCASE.run(data_path,ref_path = None,method = "scCASE",data_format = "count matrix",       data_sep=",",ref_sep=",",type_number_range=range(3, 15),output_path = "./",save_other_matrixs_ = False,obs_key = None,var_key = None,threshold = 0.01,saveZ = False,changeK = "+0",changeK_ref = "+0",save_result = False)
 
 * `data_path`:str 
@@ -61,10 +68,6 @@ The key of peak name in adata.var.
 The threshold of filtering peaks.
 * `saveZ`:bool `Default: False`
 If save the initialized value of matrix Z. If you need to use scCASe multiple times for the same data, with different parameters, please select True, which can significantly accelerate the speed
-* `changeK`:str `Default: "+0"`
-Change the parameter K.
-* `changeK_ref`:str `Default: "+0"`
-Change the parameter K of reference.
 * `save_result`: bool `Default:Flase`
 If save the enhanced result.
 
