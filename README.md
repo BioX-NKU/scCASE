@@ -18,7 +18,7 @@ The dependencies will be automatically installed along with scCASE
 
 ## Quick Start
 
-### The source code for the reproduction of results can be found [here](https://zenodo.org/record/8382877).
+### The source codes and data for the reproduction of results are publicly available at [Zenodo](https://zenodo.org/record/8382877).
 ### We also provide a [Jupyter Notebook](https://github.com/BioX-NKU/scCASE/blob/main/Tutorial.ipynb) for running scCASE.
 #### Input
 * **h5ad file**:
