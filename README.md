@@ -13,13 +13,13 @@ You can also install scCASE from GitHub via
 	git clone git://github.com/BioX-NKU/scCASE.git
 	cd scCASE
 	python setup.py install
-
-The dependencies will be automatically installed along with scCASE   
+	
+The dependencies will be automatically installed along with scCASE. Normally, the installation time does not exceed one minute.   
 
 ## Quick Start
+### We provide a [tutorial](https://github.com/BioX-NKU/scCASE/blob/main/Tutorial.ipynb) for running scCASE (tested on Ubuntu 18.04.5). The expected run time for tutorial is less than 5 minutes.
+### The source codes for the reproduction of results, all dependencies including version numbers, and dataset to tutorial are publicly available at [Zenodo](https://zenodo.org/record/8382877).
 
-### The source codes and data for the reproduction of results are publicly available at [Zenodo](https://zenodo.org/record/8382877).
-### We also provide a [Jupyter Notebook](https://github.com/BioX-NKU/scCASE/blob/main/Tutorial.ipynb) for running scCASE.
 #### Input
 * **h5ad file**:
 	* AnnData object of shape `n_obs` × `n_vars`. 
