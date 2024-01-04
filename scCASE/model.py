@@ -2,6 +2,7 @@ from decimal import InvalidOperation
 import numpy as np
 import pandas as pd
 import scanpy as sc
+from scipy.sparse import csc_matrix,csr_matrix
 import anndata as ad
 from sklearn.feature_extraction.text import TfidfTransformer
 from sklearn.decomposition import non_negative_factorization
@@ -26,7 +27,7 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.preprocessing import Normalizer
 from scCASE.preprocessing import *
 
-def run_scAGr(X2, X1, K1 , K2 , S=0.95, Alpha=0, Lambda=3, Gamma=1, Gamma2=1, Theta=0, Stop_rule=1, Seed=100, W1=None, W2=None, H=None, Z=None, R=None,saveZ = False):
+def run_scCASER(X2, X1, K1 , K2 , S=0.95, Alpha=0, Lambda=3, Gamma=1, Gamma2=1, Theta=0, Stop_rule=1, Seed=100, W1=None, W2=None, H=None, Z=None, R=None,saveZ = False):
     def J_compute(X2, P1, Z, Z0, R, W1, W2, H, Alpha, Lambda, Gamma, Gamma2, Theta):
         Wm = W1 * M + W2 * N
         norm1 = pow(LA.norm(np.dot(X2, Z*R) - np.dot(Wm, H), ord = 'fro'), 2)
@@ -73,6 +74,8 @@ def run_scAGr(X2, X1, K1 , K2 , S=0.95, Alpha=0, Lambda=3, Gamma=1, Gamma2=1, Th
         eq7 = np.trace(DW1+DW1.T)
         # eq8
         eq8 = np.trace(np.dot((D1*M).T, D1*M))
+
+        #step_lr = (0-eq1-eq2+eq3+eq4-Alpha*eq6+Alpha*eq7) / (2*eq5+2*Alpha*eq8)
         step_lr = (0-eq1-eq2+eq3+eq4-(Alpha+Gamma)*eq6+(Alpha+Gamma)*eq7) / (2*eq5+2*(Alpha+Gamma)*eq8)
         W1 = W1 - step_lr * D1
         W1 = np.maximum(W1, 0)
@@ -196,6 +199,9 @@ def run_scAGr(X2, X1, K1 , K2 , S=0.95, Alpha=0, Lambda=3, Gamma=1, Gamma2=1, Th
     n = d2[1]
     q = d2[0]
     m = d3[1]
+    print('m = '+str(m))
+    print('n = '+str(n))
+    print('q = '+str(q))
     if type(W1) == type(None):
         np.random.seed(Seed)
         W1 = np.matlib.rand(q, K1+K2)
@@ -228,7 +234,7 @@ def run_scAGr(X2, X1, K1 , K2 , S=0.95, Alpha=0, Lambda=3, Gamma=1, Gamma2=1, Th
     P1 = np.hstack((P, M3)) # Full P
     
     Maxiter_1 = 5
-    X2tX2 = np.dot(X2.T, X2)
+    X2tX2 = np.dot(X2.T, X2).A
     # Z = np.eye(n)
     Z = np.asarray(Z)
     
@@ -236,9 +242,7 @@ def run_scAGr(X2, X1, K1 , K2 , S=0.95, Alpha=0, Lambda=3, Gamma=1, Gamma2=1, Th
     W2 = nmf.fit_transform(X2)               
     H = nmf.components_                         
     W1 = P1
-    
-
-    
+        
     H = matrix(H)
     lib = np.sum(H, axis=1)
     H = H /(np.tile(lib, (1,n))+ np.spacing(1))
@@ -269,16 +273,12 @@ def run_scAGr(X2, X1, K1 , K2 , S=0.95, Alpha=0, Lambda=3, Gamma=1, Gamma2=1, Th
     J_record = np.zeros(500)
     J_min = float('inf')
     print("Updating...")
-    
+    X1 = X1.A
+    X2 = X2.A
+
     obj = J_compute(X2, P1, Z, Z0, R, W1, W2, H,  Alpha, Lambda, Gamma, Gamma2, Theta)
-    time_start = time.time()
     for iter in range(1, Maxiter_1):
-        
-        # update R
-        Seed = Seed + 1
-        np.random.seed(Seed)
-        R = np.random.binomial(1, S, size=(n, n))
-        
+               
         
         # normalize H
         H = matrix(H)
@@ -290,7 +290,9 @@ def run_scAGr(X2, X1, K1 , K2 , S=0.95, Alpha=0, Lambda=3, Gamma=1, Gamma2=1, Th
         
         
         # update Z
+
         Z, obj = Z_update(X2, P1, Z, Z0, R, W1, W2, H,  Alpha, Lambda, Gamma, Gamma2, Theta, obj)
+        
         
         # update W2
         W2, obj = W2_update(X2, P1, Z, Z0, R, W1, W2, H,  Alpha, Lambda, Gamma, Gamma2, Theta, obj)
@@ -307,115 +309,58 @@ def run_scAGr(X2, X1, K1 , K2 , S=0.95, Alpha=0, Lambda=3, Gamma=1, Gamma2=1, Th
         norm5 = pow(LA.norm(Z - Z0, ord = 'fro'), 2)
         norm6 = pow(LA.norm(P1-W1*M, ord = 'fro'), 2)
         obj = norm1 + Lambda * norm2 + Gamma * norm3 + Gamma2 * norm4 + Theta * norm5 + Alpha * norm6
+        #print('Iteration: '+str(iter)+'\t'+'J value: '+str(obj)+'\t'+'norm1: '+str(norm1)+'\t'+'norm2: '+str(norm2*Lambda)+'\t'+'norm3: '+str(norm3*Gamma) + '\t' + 'norm4: '+str(norm4*Gamma2) + '\t' + 'norm5: '+str(norm5*Theta) + '\t' + 'norm6: '+str(norm6*Alpha) )
+    print('Finished')
 
-        print('Iteration: '+str(iter)+'\t'+'Loss: '+str(obj)+'\t'+'norm1: '+str(norm1)+'\t'+'norm2: '+str(norm2*Lambda)+'\t'+'norm3: '+str(norm3*Gamma) + '\t' + 'norm4: '+str(norm4*Gamma2) + '\t' + 'norm5: '+str(norm5*Theta) + '\t' + 'norm6: '+str(norm6*Alpha) )
+    
+    return np.dot(X2, Z),Z
 
-    time_end = time.time()
-    print('\n')
-    print('## Running scCASE with seed %d ##' % Seed)
-    print('\n')
-    print('Time cost: ' + str(time_end-time_start))
-    X_ag = np.dot(X2, Z)
-    return X_ag, W1 * M + W2 * N, H , Z#, R, Z0,X2
-
-def run_scAGp(X2, K, S=0.95, Alpha=1, Lambda=10000, Gamma=1, Gamma2=1, Theta=0, Stop_rule=1, Seed=100, W2=None, H=None, Z=None, R=None,saveZ = False):
+def run_scCASE(X2, K, S=0.95, Alpha=1, Lambda=1000000, Gamma=1, Gamma2=1, Theta=0, Stop_rule=1, Seed=100, W2=None, H=None, Z=None, R=None,saveZ = False):
     def J_compute(X2, Z, Z0, R, W2, H, K, Lambda, Gamma, Gamma2, Theta):
         norm1 = pow(LA.norm(np.dot(X2, Z*R) - np.dot(W2, H), ord = 'fro'), 2)
         norm2 = Lambda * pow(LA.norm(Z - np.dot(H.T, H), ord = 'fro'), 2)
         norm3 = Gamma * pow(LA.norm(W2, ord = 'fro'), 2)
         norm4 = Gamma2 *pow(LA.norm(H, ord = 'fro'), 2)
-        norm5 = Theta *pow(LA.norm(Z - Z0, ord = 'fro'), 2)
-        obj = norm1 + norm2 + norm3 +  norm4 +  norm5
+        obj = norm1 + norm2 + norm3 +  norm4
         return obj
 
     def W2_update(X2, Z, Z0, R, W2, H, K, Lambda, Gamma, Gamma2, Theta, obj):
-        ZR = Z*R
-        ZRHt = np.dot(ZR, H.T)
-        X2ZRHt = np.dot(X2, ZRHt)
-        W2HHt = np.dot(W2, HHt)
-        W2n = W2
-        D = -2 * X2ZRHt + 2 * W2HHt + 2 * Gamma * W2;
-
-        # eq1
-        HtDt = np.dot(H.T, D.T)
-        XZR = np.dot(X2, ZR)
-        eq1 = np.trace(np.dot(HtDt, XZR))
-
-        # eq2
-        eq2 = eq1
-
-        # eq3
-        HtWt = np.dot(H.T, W2.T)
-        eq3 = np.trace(np.dot(HtWt, HtDt.T))
-
-        # eq4
-        eq4 = eq3
-
-        #eq5
-        eq5 = np.trace(np.dot(HtDt, HtDt.T))
-
-        delta = (0 - eq1 - eq2 + eq3 + eq4) / (2 * eq5)
+        D = -2 * np.einsum("ij,jk,jk,lk->il",X2,Z,R,H,optimize=True) + 2 * np.einsum("ij,jk,lk->il",W2,H,H,optimize=True)+ 2 * Gamma * W2
+        EQ1 =  1 * np.einsum("ji,kj,kl,li,li",H,D,X2,Z,R,optimize=True)
+        EQ2 =EQ1
+        EQ3 = 1 * np.einsum("ji,kj,kl,li",H,W2,D,H,optimize=True)
+        EQ4 =EQ3
+        EQ5 = 1 * np.einsum("ji,kj,kl,li",H,D,D,H,optimize=True)
+        delta = (0 - EQ1 - EQ2 + EQ3 + EQ4) / (2 * EQ5)
         W2 = W2 - delta * D
         W2 = np.maximum(W2, 0)
-        return W2, obj
+        return np.array(W2,dtype='float32'), obj
 
     
     def H_update(X2, Z, Z0, R, W2, H, K, Lambda, Gamma, Gamma2, Theta, obj):
         obj = J_compute(X2, Z, Z0, R, W2, H, K, Lambda, Gamma, Gamma2, Theta)
-        ZR = Z*R
-        W2tX2 = np.dot(W2.T, X2)
-        W2tX2ZR = np.dot(W2tX2, ZR)
-        HZZt = np.dot(H, (Z+Z.T))
-        HHT = np.dot(H,H.T)
-        HHTH = np.dot(HHT, H)
-        W2tW2 = np.dot(W2.T, W2)
-        WTWH = np.dot(W2tW2, H)
-        GradH = -2 * W2tX2ZR + 2 * WTWH - 2 * Lambda * HZZt + 4 * Lambda * HHTH + 2 * Gamma2 * H
+        GradH = -2 * np.einsum("ji,jk,kl,kl->il",W2,X2,Z,R,optimize=True) + 2 * np.einsum("ji,jk,kl->il",W2,W2,H,optimize=True) - 2 * Lambda * np.dot(H, (Z+Z.T)) + 4 * Lambda * np.einsum("ij,kj,kl->il",H,H,H,optimize=True) + 2 * Gamma2 * H
         Hn = H
         for i in range(10):
             Hx = H - (0.2**(i)) * GradH
             Hn = (np.abs(Hx) + Hx) / 2.0
             objn = J_compute(X2, Z, Z0, R, W2, Hn, K, Lambda, Gamma, Gamma2, Theta)
             if objn <= obj:
-                return Hn, objn
-        return H, obj
+                return np.array(Hn,dtype='float32'), objn
+        return np.array(H,dtype='float32'), obj
     
     def Z_update(X2, Z, Z0, R, W2, H, K, Lambda, Gamma, Gamma2, Theta, obj):
-        ZR = Z*R
-        W2tX2 = np.dot(W2.T, X2)
-        HtH = np.dot(H.T, H)
-        X2tW2H = np.dot(W2tX2.T, H)
-        RX2tW2H = R * X2tW2H
-        X2tX2ZR = np.dot(X2tX2, ZR)
-        X2tX2ZRR = X2tX2ZR * R
-        D = 2 * X2tX2ZRR - 2 * RX2tW2H + 2 * Lambda * Z - 2 * Lambda * HtH + 2 * Theta * Z - 2 * Theta * Z0 
-        # eq1
-        XDR = np.dot(X2, D*R)
-        XZR = np.dot(X2, ZR)
-        eq1 = 2 * np.trace(np.dot(XDR.T, XZR))
-
-        # eq2
-        eq2 = np.trace(np.dot(XDR.T, XDR))
-
-        # eq3
-        WH = np.dot(W2, H)
-        eq3 = 2 * np.trace(np.dot(WH.T, XDR))
-
-        # eq4
-        ZtD = np.dot(Z.T, D)
-        eq4 = np.trace(ZtD + ZtD.T)
-
-        # eq5
-        eq5 = np.trace(np.dot(D.T, D))
-
-        # eq6
-        eq6 = 2 * np.trace(np.dot(HtH, D))
-
-        delta = (eq1 - eq3 + Lambda * eq4 - Lambda * eq6) / (2 * eq2 + 2 * Lambda * eq5)
-        
+        D = 2 * np.einsum("ji,jk,kl,kl,il->il",X2,X2,Z,R,R, optimize=True)-2 * np.einsum("ji,jk,kl,il->il",X2,W2,H,R, optimize=True) + 2 * Lambda * Z - 2 * Lambda * np.dot(H.T, H)
+        EQ1 =  2 * np.einsum("hi,ij,ij,hl,lj,lj",X2,D,R,X2,Z,R,optimize=True)
+        EQ2 =  1 * np.einsum("hi,ij,ij,hl,lj,lj",X2,D,R,X2,D,R,optimize=True)
+        EQ3 =  2 * np.einsum("ij,jk,im,mk,mk",W2,H,X2,D,R,optimize=True)
+        EQ4 =  2 * np.einsum("ji,ji",Z,D,optimize=True)
+        EQ5 =  1 * np.einsum("ji,ji",D,D,optimize=True)
+        EQ6 =  2 * np.einsum("ij,ik,kj",H,H,D,optimize=True)
+        delta = (EQ1 - EQ3 + Lambda * EQ4 - Lambda * EQ6) / (2 * EQ2 + 2 * Lambda * EQ5)
         Z = Z - delta * D
         Z = np.maximum(Z, 0)
-        return Z, obj
+        return np.array(Z,dtype='float32'), obj
 
  
     print("Initializing...")
@@ -423,36 +368,24 @@ def run_scAGp(X2, K, S=0.95, Alpha=1, Lambda=10000, Gamma=1, Gamma2=1, Theta=0, 
     n = d2[1]
     q = d2[0]
     
-    if type(W2) == type(None):
-        np.random.seed(Seed)
-        W2 = np.matlib.rand(q, K)
-    if type(H) == type(None):
-        np.random.seed(Seed)
-        H = np.matlib.rand(K, n)
-    if type(Z) == type(None):
-        np.random.seed(Seed)
-        Z = np.matlib.rand(n, n)
     if type(R) == type(None):
         np.random.seed(Seed)
-        R = np.random.binomial(1, S, size=(n, n))
+        R = np.array(np.random.binomial(1, S, size=(n, n)))
     
     
     Maxiter_1 = 3
-    X2tX2 = np.dot(X2.T, X2)
-    # Z = np.eye(n)
-    Z = np.asarray(Z)
-    
     nmf = NMF(n_components=K, max_iter=10000, random_state=Seed)
-    W2 = nmf.fit_transform(X2)
-    H = nmf.components_
     
+    W2 = csc_matrix(nmf.fit_transform(X2),dtype='float32')
+
+    H = nmf.components_
     H = matrix(H)
     lib = np.sum(H, axis=1)
     H = H /(np.tile(lib, (1,n))+ np.spacing(1))
-    H = np.asarray(H)
-        
-    HHt = np.dot(H, H.T)
+    H = csc_matrix(H,dtype='float32')
     
+    Z0 = jaccard_dis(X2)
+    Z = Z0
     
     if os.path.exists('Z0.npy'):
         print('Loading exist similarity matrix...')
@@ -469,64 +402,64 @@ def run_scAGp(X2, K, S=0.95, Alpha=1, Lambda=10000, Gamma=1, Gamma2=1, Theta=0, 
         Z0 = jaccard_dis(X2)
         if saveZ == True:
             np.save('Z0.npy', Z0)
-
-    
-    Z = Z0
-    Z = np.asarray(Z)
-    
+            
     J_record = np.zeros(500)
     J_min = float('inf')
     print("Updating...")
+    H= H.A
+    X2 = X2.A
+    W2 = W2.A
     obj = J_compute(X2, Z, Z0, R, W2, H, K, Lambda, Gamma, Gamma2, Theta)
     
     for iter in range(1, Maxiter_1+1):
-         # update R
+        # update R
+        '''
         Seed = Seed + 1
         np.random.seed(Seed)
         R = np.random.binomial(1, S, size=(n, n))
+        R = np.array(R,dtype='float32')
+        '''
 
         # normalize H
         H = matrix(H)
         lib = np.sum(H, axis=1)
         H = H /(np.tile(lib, (1,n))+ np.spacing(1))
-        H = np.asarray(H)
-        
+        H = np.asarray(H,dtype='float32')
         HHt = np.dot(H, H.T)
-        
+
         # update Z
         Z, obj = Z_update(X2, Z, Z0, R, W2, H, K, Lambda, Gamma, Gamma2, Theta, obj)
-        
 
-       
+        '''
+        # normalize Z
+        Z = matrix(Z)
+        lib = np.sum(Z, axis=1)
+        Z = Z /(np.tile(lib, (1,n))+ np.spacing(1))
+        Z = np.asarray(Z)
+        '''
+
         # update W2
         W2, obj = W2_update(X2, Z, Z0, R, W2, H, K, Lambda, Gamma, Gamma2, Theta, obj)
-        
+
         # update H
         H, obj = H_update(X2, Z, Z0, R, W2, H, K, Lambda, Gamma, Gamma2, Theta, obj)
-        
+
         HHt = np.dot(H, H.T)
-        
+
         norm1 = pow(LA.norm(np.dot(X2, Z*R) - np.dot(W2, H), ord = 'fro'), 2)
         norm2 = pow(LA.norm(Z - np.dot(H.T, H), ord = 'fro'), 2)
         norm3 = pow(LA.norm(W2, ord = 'fro'), 2)
         norm4 = pow(LA.norm(H, ord = 'fro'), 2)
-        norm5 = pow(LA.norm(Z - Z0, ord = 'fro'), 2)
-        obj = norm1 + Lambda * norm2 + Gamma * norm3 + Gamma2 * norm4 + Theta * norm5
-        
+        obj = norm1 + Lambda * norm2 + Gamma * norm3 + Gamma2 * norm4 
         J_record[iter-1] = obj
-        if(iter%1 == 0):
-            print('Iteration: '+str(iter)+'\t'+'Loss: '+str(obj)+'\t'+'norm1: '+str(norm1)+'\t'+'norm2: '+str(norm2*Lambda)+'\t'+'norm3: '+str(norm3*Gamma)+'\t'+'norm4: '+str(norm4*Gamma2)+'\t'+'norm5: '+str(norm5*Theta))
+        #if(iter%1 == 0):
+            #print('Iteration: '+str(iter)+'\t'+'J value: '+str(obj)+'\t'+'norm1: '+str(norm1)+'\t'+'norm2: '+str(norm2*Lambda)+'\t'+'norm3: '+str(norm3*Gamma)+'\t'+'norm4: '+str(norm4*Gamma2))
         iter = iter + 1
         if iter > 20:
             if (J_record[iter-10] - J_record[iter-9]) / (J_record[iter-9] + np.spacing(1)) < 1e-6:
                 break
     
-    print('\n')
-    print('## Running scCASE with seed %d ##' % Seed)
-    print('\n')
-    # J_plot(J_record)
-    
-    Zt = np.dot(H.T, H)
-    X_ag = np.dot(X2, Z)
+    print('Finished')
 
-    return X_ag, W2, H, Z#, R, Z0
+
+    return np.dot(X2, Z), W2, H, Z

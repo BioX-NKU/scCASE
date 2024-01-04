@@ -4,9 +4,9 @@
 from setuptools import setup, find_packages
 
 setup(name='scCASE',
-    version='0.1.0',
+    version='0.2.1',
     keywords=("pip", "scCASE", "single-cell"),
-    url="https://github.com/BioX-NKU/",
+    url="https://hub.njuu.cf/BioX-NKU/",
     author="BioX-NKU",
     packages=find_packages(),
 
@@ -19,10 +19,12 @@ setup(name='scCASE',
         'scanpy',
         'numpy',
         'anndata',
-        'sklearn',
+        'scikit-learn',
+        'louvain',
+        'leidenalg',
+        'igraph'
         'episcanpy',
-        'kneed',
-        'epiaster',],
+        'kneed>=0.7.0',],
     classifiers=['Intended Audience :: Science/Research',
       'License :: OSI Approved :: MIT License',
       'Programming Language :: Python :: 3.8',

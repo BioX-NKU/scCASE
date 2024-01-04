@@ -4,24 +4,26 @@ import scanpy as sc
 from sklearn.feature_extraction.text import TfidfTransformer
 from sklearn.decomposition import non_negative_factorization
 from numpy import matrix
+import scipy
 import episcanpy.api as epi
 from sklearn.preprocessing import Binarizer
 from scipy.spatial.distance import pdist
 from scipy.spatial.distance import squareform
 from sklearn.metrics import  silhouette_score
-import epiaster as aster
+import scCASE.Aster as aster
 from sklearn.preprocessing import MinMaxScaler
 
 def jaccard_dis(data):
-    data = np.array(data)
-    data = binarizer(data).T
-    res = pdist(data, 'jaccard')
-    n = data.shape[0]
-    jaccard_sim = (1 - squareform(res))
-    jaccard_sim = matrix(jaccard_sim)
-    lib = np.sum(jaccard_sim, axis=1)
-    jaccard_sim = jaccard_sim/np.tile(lib, (1,n))
-    jaccard_sim = np.asarray(jaccard_sim)
+    data = data.T.astype(bool).astype(np.int16)
+    if type(data) != scipy.sparse._csr.csr_matrix:
+        data = csr_matrix(data)
+    intrsct = data.dot(data.T)
+    row_sums = intrsct.diagonal()
+    unions = row_sums[:,None] + row_sums - intrsct
+    dist = (intrsct / unions).A
+    lib = np.sum(dist, axis=1).reshape(-1,1)
+    dist = dist/np.tile(lib, (1,data.shape[0]))
+    jaccard_sim = np.array(dist,dtype='float32')
     return jaccard_sim
 
 def evaluation_louvain(matrix, cluster):
@@ -55,19 +57,12 @@ def Lambda_calculate(data_tfidf, method):
     """
     cell_num = data_tfidf.shape[1]
     if method == 'p':
-#        Lambda = cell_num*1000
-        if cell_num >= 800:
-            Lambda = 1000000
-        else:
-            Lambda = 100000
+        Lambda = 1000000
     else:
-        if cell_num >= 800:
-            Lambda = 100000
-        else:
-            Lambda = 10000
+        Lambda = 100000
     return Lambda
 
-def Estimate_k(data_tfidf,method,search_range ):
+def Estimate_k(data_tfidf,method,search_range):
     adata = sc.AnnData(data_tfidf.T,dtype="float32")
     search_list = list(search_range)
     estimated_k = aster.ensemble.estimate_k(adata, search_list)
@@ -94,13 +89,11 @@ def select_peak(data, ref_mat, threshold = 0.01):
         ref_mat_n = ref_mat
     return data_n, ref_mat_n, select_peak
 
-def tf_idf_transform(data):
+def tf_idf_transform(data): 
     model = TfidfTransformer(smooth_idf=False, norm="l2")
     model = model.fit(np.transpose(data))
     model.idf_ -= 1
     tf_idf = np.transpose(model.transform(np.transpose(data)))
-    tf_idf = tf_idf.todense()
-    tf_idf = np.array(tf_idf)
     return tf_idf
 
 def tfidf(data,bulk = None):
@@ -109,7 +102,7 @@ def tfidf(data,bulk = None):
         ref_tfidf =tf_idf_transform(bulk)
     else:
         ref_tfidf = None
-    return data_tfidf,ref_tfidf
+    return data_tfidf.astype(np.float32),ref_tfidf
 
 
 def binarizer(count_matrix,threshold = 0):
